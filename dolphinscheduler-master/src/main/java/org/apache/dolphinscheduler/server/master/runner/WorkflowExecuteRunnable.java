@@ -1144,6 +1144,8 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
     public void getPreVarPool(TaskInstance taskInstance, Set<String> preTask) {
         Map<String, Property> allProperty = new HashMap<>();
         Map<String, TaskInstance> allTaskInstance = new HashMap<>();
+        logger.info("---ReadyToSubmit task > Process Instance Id : {}, Task Instance Id : {}, Task Name : {}, PreTasks : {}", taskInstance.getProcessInstanceId(),
+                taskInstance.getId(), taskInstance.getName(), taskInstance.getState().name(), preTask.toString());
         if (CollectionUtils.isNotEmpty(preTask)) {
             for (String preTaskCode : preTask) {
                 Integer taskId = completeTaskMap.get(Long.parseLong(preTaskCode));
@@ -1155,6 +1157,10 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
                     continue;
                 }
                 String preVarPool = preTaskInstance.getVarPool();
+                logger.info("---ReadyToSubmit task > Process Instance Id : {}, Task Instance Id : {}, Task Name : {}, PreTaskInstance: {}", taskInstance.getProcessInstanceId(),
+                        taskInstance.getId(), taskInstance.getName(), taskInstance.getState().name(), preTaskInstance.toString());
+                logger.info("---ReadyToSubmit task > Process Instance Id : {}, Task Instance Id : {}, Task Name : {}, PreTaskInstance's PreVarPool : {}", taskInstance.getProcessInstanceId(),
+                        taskInstance.getId(), taskInstance.getName(), taskInstance.getState().name(), preVarPool);
                 if (StringUtils.isNotEmpty(preVarPool)) {
                     List<Property> properties = JSONUtils.toList(preVarPool, Property.class);
                     for (Property info : properties) {
@@ -1191,6 +1197,17 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
                 //if  property'value of loop is not empty,and the other's value is not empty too, use the earlier value
             } else if (StringUtils.isNotEmpty(otherPro.getValue())) {
                 TaskInstance otherTask = allTaskInstance.get(proName);
+                logger.info("--Property Name : {}, otherTask: {}, ", proName, otherTask.toString());
+                logger.info("--PreTask id:{}, name:{}, state:{}, endTime:{} ", preTaskInstance.getId(), preTaskInstance.getName(),
+                        preTaskInstance.getState().name(), (preTaskInstance.getEndTime()==null) ? "null" : preTaskInstance.getEndTime().getTime());
+                logger.info("--OtherTask id:{}, name:{}, state:{}, endTime:{} ", otherTask.getId(), otherTask.getName(),
+                        otherTask.getState().name(), (otherTask.getEndTime()==null) ? "null" : otherTask.getEndTime().getTime());
+
+                if (otherTask.getEndTime() == null || preTaskInstance.getEndTime() == null) {
+                    logger.info("--Returned");
+                    return;
+                }
+
                 if (otherTask.getEndTime().getTime() > preTaskInstance.getEndTime().getTime()) {
                     allProperty.put(proName, thisProperty);
                     allTaskInstance.put(proName, preTaskInstance);
@@ -1754,6 +1771,8 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
             if (task == null) {
                 continue;
             }
+
+            logger.info("--From readyToSubmitTaskQueue : {}", task.toString());
             // stop tasks which is retrying if forced success happens
             if (task.taskCanRetry()) {
                 TaskInstance retryTask = processService.findTaskInstanceById(task.getId());
