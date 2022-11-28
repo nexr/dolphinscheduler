@@ -1208,7 +1208,7 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
                         otherTask.getState().name(), (otherTask.getEndTime()==null) ? "null" : otherTask.getEndTime().getTime());
 
                 if (otherTask.getEndTime() == null || preTaskInstance.getEndTime() == null) {
-                    logger.info("--OtherTask {} EndTime {}/PreTask {} EndTime", otherTask.getName(), otherTask.getEndTime(),
+                    logger.info("--OtherTask {} EndTime {} / PreTask {} EndTime {}", otherTask.getName(), otherTask.getEndTime(),
                             preTaskInstance.getName(), preTaskInstance.getEndTime());
                     return;
                 }
