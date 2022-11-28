@@ -18,7 +18,7 @@
 FROM openjdk:8-jre-slim-buster
 
 ENV DOCKER true
-ENV TZ Asia/Shanghai
+ENV TZ Asia/Seoul
 ENV DOLPHINSCHEDULER_HOME /opt/dolphinscheduler
 
 RUN apt update ; \
