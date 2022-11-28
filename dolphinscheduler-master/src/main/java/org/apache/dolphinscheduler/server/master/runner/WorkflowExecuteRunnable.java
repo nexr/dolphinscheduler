@@ -1263,6 +1263,20 @@ public class WorkflowExecuteRunnable implements IWorkflowExecuteRunnable {
                 // if property'value of loop is not empty,and the other's value is not empty too, use the earlier value
             } else if (StringUtils.isNotEmpty(otherPro.getValue())) {
                 TaskInstance otherTask = allTaskInstance.get(proName);
+
+                if (otherTask == null) {
+                    logger.warn("[WorkflowInstance-{}][TaskInstance-{}] otherTask for [PropertyName-{}] is null.",
+                            preTaskInstance.getProcessInstanceId(), preTaskInstance.getId(), proName);
+                    return;
+                }
+
+                if (otherTask.getEndTime() == null || preTaskInstance.getEndTime() == null) {
+                    logger.warn("[WorkflowInstance-{}][OtherTaskInstance-{}][PreTaskInstance-{}] have null endTime. [otherTask-endTime-{}, preTaskInstance-endTime-{}].",
+                            preTaskInstance.getProcessInstanceId(), otherTask.getId(), preTaskInstance.getId(),
+                            otherTask.getEndTime(), preTaskInstance.getEndTime());
+                    return;
+                }
+
                 if (otherTask.getEndTime().getTime() > preTaskInstance.getEndTime().getTime()) {
                     allProperty.put(proName, thisProperty);
                     allTaskInstance.put(proName, preTaskInstance);
