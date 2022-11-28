@@ -1194,6 +1194,20 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
                 //if  property'value of loop is not empty,and the other's value is not empty too, use the earlier value
             } else if (StringUtils.isNotEmpty(otherPro.getValue())) {
                 TaskInstance otherTask = allTaskInstance.get(proName);
+
+                if (otherTask == null) {
+                    logger.warn("[WorkflowInstance-{}][TaskInstance-{}] otherTask for [PropertyName-{}] is null.",
+                            preTaskInstance.getProcessInstanceId(), preTaskInstance.getId(), proName);
+                    return;
+                }
+
+                if (otherTask.getEndTime() == null || preTaskInstance.getEndTime() == null) {
+                    logger.warn("[WorkflowInstance-{}][OtherTaskInstance-{}][PreTaskInstance-{}] have null endTime. [otherTask-endTime-{}, preTaskInstance-endTime-{}].",
+                            preTaskInstance.getProcessInstanceId(), otherTask.getId(), preTaskInstance.getId(),
+                            otherTask.getEndTime(), preTaskInstance.getEndTime());
+                    return;
+                }
+
                 if (otherTask.getEndTime().getTime() > preTaskInstance.getEndTime().getTime()) {
                     allProperty.put(proName, thisProperty);
                     allTaskInstance.put(proName, preTaskInstance);
@@ -1760,6 +1774,8 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
             if (task == null) {
                 continue;
             }
+
+            logger.info("--From readyToSubmitTaskQueue : {}", task.toString());
             // stop tasks which is retrying if forced success happens
             if (task.taskCanRetry()) {
                 TaskInstance retryTask = processService.findTaskInstanceById(task.getId());
