@@ -1197,14 +1197,19 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
                 //if  property'value of loop is not empty,and the other's value is not empty too, use the earlier value
             } else if (StringUtils.isNotEmpty(otherPro.getValue())) {
                 TaskInstance otherTask = allTaskInstance.get(proName);
-                logger.info("--Property Name : {}, otherTask: {}, ", proName, otherTask.toString());
+                logger.info("--Property Name : {}, otherTask: {}, ", proName, (otherTask==null)? "null" : otherTask.toString());
+                if (otherTask == null) {
+                    logger.info("--OtherTask for Property : {} is null", proName);
+                    return;
+                }
                 logger.info("--PreTask id:{}, name:{}, state:{}, endTime:{} ", preTaskInstance.getId(), preTaskInstance.getName(),
                         preTaskInstance.getState().name(), (preTaskInstance.getEndTime()==null) ? "null" : preTaskInstance.getEndTime().getTime());
                 logger.info("--OtherTask id:{}, name:{}, state:{}, endTime:{} ", otherTask.getId(), otherTask.getName(),
                         otherTask.getState().name(), (otherTask.getEndTime()==null) ? "null" : otherTask.getEndTime().getTime());
 
                 if (otherTask.getEndTime() == null || preTaskInstance.getEndTime() == null) {
-                    logger.info("--Returned");
+                    logger.info("--OtherTask {} EndTime {}/PreTask {} EndTime", otherTask.getName(), otherTask.getEndTime(),
+                            preTaskInstance.getName(), preTaskInstance.getEndTime());
                     return;
                 }
 
