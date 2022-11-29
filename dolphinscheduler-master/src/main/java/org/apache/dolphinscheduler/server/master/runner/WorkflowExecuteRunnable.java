@@ -1200,7 +1200,7 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
 
                 if (otherTask.getEndTime() == null || preTaskInstance.getEndTime() == null) {
                     logger.warn("[WorkflowInstance-{}][OtherTaskInstance-{}][PreTaskInstance-{}] have null endTime. [otherTask-endTime-{}, preTaskInstance-endTime-{}].",
-                            preTaskInstance.getProcessInstanceId(), otherTask.getId(), preTaskInstance.getProcessInstanceId(),
+                            preTaskInstance.getProcessInstanceId(), otherTask.getId(), preTaskInstance.getId(),
                             otherTask.getEndTime(), preTaskInstance.getEndTime());
                     return;
                 }
