@@ -133,7 +133,7 @@
         <aws.sdk.version>1.12.160</aws.sdk.version>
         <joda-time.version>2.10.13</joda-time.version>
         <lombok.version>1.18.20</lombok.version>
-        <docker.hub>apache</docker.hub>
+        <docker.hub>harbor.nexr.kr/ndap</docker.hub>
         <docker.repo>${project.name}</docker.repo>
         <docker.tag>${project.version}</docker.tag>
         <docker.build.skip>true</docker.build.skip>
