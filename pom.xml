@@ -105,7 +105,7 @@
         <rpm-maven-plugion.version>2.2.0</rpm-maven-plugion.version>
         <jacoco.version>0.8.7</jacoco.version>
         <jcip.version>1.0</jcip.version>
-        <maven.deploy.skip>false</maven.deploy.skip>
+        <maven.deploy.skip>true</maven.deploy.skip>
         <cobertura-maven-plugin.version>2.7</cobertura-maven-plugin.version>
         <servlet-api.version>2.5</servlet-api.version>
         <swagger.version>1.9.3</swagger.version>
@@ -136,8 +136,8 @@
         <docker.hub>harbor.nexr.kr/ndap</docker.hub>
         <docker.repo>${project.name}</docker.repo>
         <docker.tag>${project.version}</docker.tag>
-        <docker.build.skip>true</docker.build.skip>
-        <docker.push.skip>true</docker.push.skip>
+        <docker.build.skip>false</docker.build.skip>
+        <docker.push.skip>false</docker.push.skip>
 
         <python.sign.skip>true</python.sign.skip>
     </properties>
@@ -970,18 +970,8 @@
                                 <executable>docker</executable>
                                 <workingDirectory>${project.basedir}</workingDirectory>
                                 <arguments>
-                                    <argument>buildx</argument>
-                                    <argument>build</argument>
-                                    <argument>--platform</argument>
-                                    <argument>linux/amd64,linux/arm64</argument>
-                                    <argument>--no-cache</argument>
-                                    <argument>--push</argument>
-                                    <argument>-t</argument>
+                                    <argument>push</argument>
                                     <argument>${docker.hub}/${docker.repo}:${docker.tag}</argument>
-                                    <argument>-t</argument>
-                                    <argument>${docker.hub}/${docker.repo}:latest</argument>
-                                    <argument>${project.basedir}</argument>
-                                    <argument>--file=src/main/docker/Dockerfile</argument>
                                 </arguments>
                             </configuration>
                         </execution>
