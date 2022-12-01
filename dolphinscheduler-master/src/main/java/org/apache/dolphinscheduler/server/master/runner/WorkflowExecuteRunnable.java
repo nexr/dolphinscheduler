@@ -1769,7 +1769,6 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
                 continue;
             }
 
-            logger.info("--From readyToSubmitTaskQueue : {}", task.toString());
             // stop tasks which is retrying if forced success happens
             if (task.taskCanRetry()) {
                 TaskInstance retryTask = processService.findTaskInstanceById(task.getId());
