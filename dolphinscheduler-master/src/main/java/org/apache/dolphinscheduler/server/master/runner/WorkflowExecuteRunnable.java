@@ -86,6 +86,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -404,7 +406,11 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
             this.updateProcessInstanceState();
         } catch (Exception ex) {
             logger.error("Task finish failed, get a exception, will remove this taskInstance from completeTaskMap", ex);
+            StringWriter stringWriter = new StringWriter();
+            ex.printStackTrace(new PrintWriter(stringWriter));
+            logger.error("--[paul] stack : {}", stringWriter.toString());
             // remove the task from complete map, so that we can finish in the next time.
+            logger.error("--[paul] TaskInstance Info : {}", taskInstance.toString());
             completeTaskMap.remove(taskInstance.getTaskCode());
             throw ex;
         }
