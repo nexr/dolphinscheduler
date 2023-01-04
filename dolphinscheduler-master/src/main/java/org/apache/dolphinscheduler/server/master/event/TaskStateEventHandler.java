@@ -67,10 +67,10 @@ public class TaskStateEventHandler implements StateEventHandler {
             final JsonObject globalParams = new Gson().fromJson(processGlobalParams, JsonObject.class);
 
             String uri;
-            if (globalParams.has("NDAP_WORKFLOW_INSTANCE_NOTIFICATION_URI")) {
-                uri = globalParams.get("NDAP_WORKFLOW_INSTANCE_NOTIFICATION_URI").getAsString();
+            if (globalParams.has("NDAP_TASK_INSTANCE_NOTIFICATION_URI")) {
+                uri = globalParams.get("NDAP_TASK_INSTANCE_NOTIFICATION_URI").getAsString();
             } else {
-                throw new RuntimeException("No NDAP_WORKFLOW_INSTANCE_NOTIFICATION_URI in process instance id[" + processInstance.getId() + "]");
+                throw new RuntimeException("No NDAP_TASK_INSTANCE_NOTIFICATION_URI in process instance id[" + processInstance.getId() + "]");
             }
 
             String workflowInstanceId;
