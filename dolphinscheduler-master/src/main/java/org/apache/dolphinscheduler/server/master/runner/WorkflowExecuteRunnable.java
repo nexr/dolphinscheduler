@@ -78,15 +78,12 @@ import org.apache.dolphinscheduler.server.master.runner.task.TaskAction;
 import org.apache.dolphinscheduler.server.master.runner.task.TaskProcessorFactory;
 import org.apache.dolphinscheduler.service.alert.ProcessAlertManager;
 import org.apache.dolphinscheduler.service.process.ProcessService;
-import org.apache.dolphinscheduler.service.quartz.cron.CronUtils;
 import org.apache.dolphinscheduler.service.queue.PeerTaskInstancePriorityQueue;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -246,12 +243,38 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
     }
 
     /**
+     * Notify Processs_State_Change, Task_State_Change to NDAP
+     * @param stateEvent
+     */
+    private void notifyStateEvent(StateEvent stateEvent) {
+        //By Paul for NDAP
+        if (!stateEvent.getType().equals(StateEventType.PROCESS_STATE_CHANGE)
+                && !stateEvent.getType().equals(StateEventType.TASK_STATE_CHANGE)) {
+            return;
+        }
+
+        try {
+            StateEventHandler stateEventHandler =
+                    StateEventHandlerManager.getStateEventHandler(StateEventType.NOTIFY_STATE_CHANGE).orElse(null);
+
+            if (stateEventHandler != null) {
+                logger.info("Notify state event, {}", stateEvent);
+                stateEventHandler.handleStateEvent(this, stateEvent);
+            } else {
+                logger.warn("Notify State Event Handler not loaded");
+            }
+        } catch (Exception e) {
+            logger.warn("Notify State Event{} error : {}", stateEvent.getType().name(), e.getMessage());
+        }
+    }
+
+    /**
      * handle event
      */
     public void handleEvents() {
         if (!isStart()) {
             logger.info(
-                "The workflow instance is not started, will not handle its state event, current state event size: {}",
+                    "The workflow instance is not started, will not handle its state event, current state event size: {}",
                 stateEvents);
             return;
         }
@@ -270,6 +293,8 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
                         .orElseThrow(() -> new StateEventHandleError("Cannot find handler for the given state event"));
                 logger.info("Begin to handle state event, {}", stateEvent);
                 if (stateEventHandler.handleStateEvent(this, stateEvent)) {
+                    //By paul for NDAP
+                    notifyStateEvent(stateEvent);
                     this.stateEvents.remove(stateEvent);
                 }
             } catch (StateEventHandleError stateEventHandleError) {
@@ -398,11 +423,7 @@ public class WorkflowExecuteRunnable implements Callable<WorkflowSubmitStatue> {
             this.updateProcessInstanceState();
         } catch (Exception ex) {
             logger.error("Task finish failed, get a exception, will remove this taskInstance from completeTaskMap", ex);
-            StringWriter stringWriter = new StringWriter();
-            ex.printStackTrace(new PrintWriter(stringWriter));
-            logger.error("--[paul] stack : {}", stringWriter.toString());
             // remove the task from complete map, so that we can finish in the next time.
-            logger.error("--[paul] TaskInstance Info : {}", taskInstance.toString());
             completeTaskMap.remove(taskInstance.getTaskCode());
             throw ex;
         }
