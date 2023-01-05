@@ -27,7 +27,9 @@ public enum StateEventType {
     TASK_TIMEOUT(3, "task timeout"),
     WAIT_TASK_GROUP(4, "wait task group"),
     TASK_RETRY(5, "task retry"),
-    PROCESS_BLOCKED(6, "process blocked");
+    PROCESS_BLOCKED(6, "process blocked"),
+    //by Paul for NDAP.
+    NOTIFY_STATE_CHANGE(7, "notify state change");
 
     StateEventType(int code, String descp) {
         this.code = code;
