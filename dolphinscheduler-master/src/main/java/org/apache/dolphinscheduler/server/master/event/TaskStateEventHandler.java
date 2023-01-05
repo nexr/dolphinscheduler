@@ -35,6 +35,7 @@ import java.util.Optional;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +67,12 @@ public class TaskStateEventHandler implements StateEventHandler {
 
             final JsonObject globalParams = new Gson().fromJson(processGlobalParams, JsonObject.class);
 
+            logger.info("process instance id[{}], task code[{}], task instance id[{}], process global params[{}]",
+                    event.getProcessInstanceId(), event.getTaskCode(), event.getTaskInstanceId(), processGlobalParams);
+
+            logger.info("process instance id[{}], task code[{}], task instance id[{}], process var pool[{}]",
+                    event.getProcessInstanceId(), event.getTaskCode(), event.getTaskInstanceId(), processInstance.getVarPool());
+
             String uri;
             if (globalParams.has("NDAP_TASK_INSTANCE_NOTIFICATION_URI")) {
                 uri = globalParams.get("NDAP_TASK_INSTANCE_NOTIFICATION_URI").getAsString();
@@ -80,17 +87,15 @@ public class TaskStateEventHandler implements StateEventHandler {
                 throw new RuntimeException("No NDAP_SUB_WORKFLOW_PARENT_INSTANCE_ID in process instance id[" + processInstance.getId() + "]");
             }
 
-            logger.info("ndap workflow instance id[{}], process instance id[{}], task code[{}], task instance id[{}], notification uri[{}] process global params[{}]",
-                    workflowInstanceId, event.getProcessInstanceId(), event.getTaskCode(), event.getTaskInstanceId(), uri, processGlobalParams);
-            logger.info("ndap workflow instance id[{}], process instance id[{}], task code[{}], task instance id[{}], notification uri[{}] process var pool[{}]",
-                    workflowInstanceId, event.getProcessInstanceId(), event.getTaskCode(), event.getTaskInstanceId(), uri, processInstance.getVarPool());
+            logger.info("ndap workflow instance id[{}], process instance id[{}], task code[{}], task instance id[{}], notification uri[{}]",
+                    workflowInstanceId, event.getProcessInstanceId(), event.getTaskCode(), event.getTaskInstanceId(), uri);
 
             String reqBody = makeTaskInstanceStateMsg(workflowInstanceId, String.valueOf(event.getProcessInstanceId()),
                     String.valueOf(event.getTaskCode()), String.valueOf(event.getTaskInstanceId()), event.getExecutionStatus().name());
             ByteArrayEntity entity = new ByteArrayEntity(reqBody.getBytes(StandardCharsets.UTF_8));
 
             HttpPost request = new HttpPost(uri);
-            request.setHeader(HttpHeaders.CONTENT_TYPE, "application/json;utf-8");
+            request.setHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.toString());
             request.setEntity(entity);
             HttpUtils.getInstance().execute(request);
         } catch (Exception e) {
