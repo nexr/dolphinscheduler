@@ -39,8 +39,9 @@ public class NotifyStateEventHandler implements StateEventHandler {
     }
 
     private String findValueFromDolphinParams(JsonArray params, String propValue) {
-        if (params == null ||  params.isEmpty())
+        if (params == null ||  params.isEmpty()) {
             return null;
+        }
 
         Iterator<JsonElement> iter = params.iterator();
 
