@@ -11,6 +11,7 @@ import org.apache.dolphinscheduler.common.utils.HttpUtils;
 import org.apache.dolphinscheduler.dao.entity.ProcessInstance;
 import org.apache.dolphinscheduler.dao.entity.TaskInstance;
 import org.apache.dolphinscheduler.server.master.runner.WorkflowExecuteRunnable;
+import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -159,10 +160,11 @@ public class NotifyStateEventHandler implements StateEventHandler {
         return false;
     }
 
-    private void sendEventMsg (String uri, String msg) throws IOException {
+    private void sendEventMsg (String uri, String msg) throws Exception {
         HttpPost request = new HttpPost(uri);
         request.setEntity(new StringEntity(msg, ContentType.APPLICATION_JSON));
-        HttpUtils.getInstance().execute(request);
+        HttpResponse response = HttpUtils.getInstance().execute(request);
+        logger.info("notify to {} with msg {} status line {}", uri, msg, response.getStatusLine().toString());
     }
 
     @Override
