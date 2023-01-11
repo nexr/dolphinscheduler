@@ -7,14 +7,18 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.apache.dolphinscheduler.common.enums.StateEventType;
-import org.apache.dolphinscheduler.common.utils.HttpUtils;
 import org.apache.dolphinscheduler.dao.entity.ProcessInstance;
 import org.apache.dolphinscheduler.dao.entity.TaskInstance;
 import org.apache.dolphinscheduler.server.master.runner.WorkflowExecuteRunnable;
-import org.apache.http.HttpResponse;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +32,23 @@ public class NotifyStateEventHandler implements StateEventHandler {
     private static final String NDAP_WORKFLOW_INSTANCE_ID_PROP = "NDAP_SUB_WORKFLOW_PARENT_INSTANCE_ID";
     private static final String NDAP_WORKFLOW_INSTANCE_STATE_CHANGE_URI_PROP = "NDAP_WORKFLOW_INSTANCE_NOTIFICATION_URI";
     private static final String NDAP_TASK_INSTANCE_STATE_CHANGE_URI_PROP = "NDAP_TASK_INSTANCE_NOTIFICATION_URI";
+    private static CloseableHttpClient client = null;
+
+    static {
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(5000)
+                .setConnectionRequestTimeout(10000)
+                .setSocketTimeout(15000)
+                .build();
+        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+        cm.setMaxTotal(1200);
+        cm.setDefaultMaxPerRoute(1200);
+        client = HttpClients.custom()
+                .setDefaultRequestConfig(requestConfig)
+                .setConnectionManager(cm)
+                .build();
+    }
+
     private String makeStateEventMsg(Long workflowInstanceId, Long dolphinSchedulerProcessInstanceId,
                                      Long dolphinSchedulerTaskCode, Long dolphinSchedulerTaskInstanceId,
                                      String status, String taskResult, Date startTime, Date endTime) {
@@ -193,8 +214,16 @@ public class NotifyStateEventHandler implements StateEventHandler {
     private void sendEventMsg (String uri, String msg) throws Exception {
         HttpPost request = new HttpPost(uri);
         request.setEntity(new StringEntity(msg, ContentType.APPLICATION_JSON));
-        HttpResponse response = HttpUtils.getInstance().execute(request);
-        logger.info("notify to {} with msg {} status line {}", uri, msg, response.getStatusLine().toString());
+
+        try (CloseableHttpResponse response = client.execute(request)) {
+            logger.info("notify to {} with msg {} status line : {}", uri, msg, response.getStatusLine().toString());
+
+            if (response != null) {
+                EntityUtils.consumeQuietly(response.getEntity());
+            }
+        }
+
+        request.releaseConnection();
     }
 
     @Override
