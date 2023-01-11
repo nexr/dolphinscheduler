@@ -37,7 +37,7 @@ public class NotifyStateEventHandler implements StateEventHandler {
         jsonBody.addProperty("dolphinSchedulerTaskCode", dolphinSchedulerTaskCode);
         jsonBody.addProperty("dolphinSchedulerTaskInstanceId", dolphinSchedulerTaskInstanceId);
         jsonBody.addProperty("status", status);
-        jsonBody.addProperty("taskResult", taskResult);
+        jsonBody.addProperty("taskResult", (taskResult != null) ? taskResult : null);
         jsonBody.addProperty("startTime", (startTime != null) ? startTime.getTime() : null);
         jsonBody.addProperty("endTime", (endTime != null) ? endTime.getTime() : null);
         return jsonBody.toString();
