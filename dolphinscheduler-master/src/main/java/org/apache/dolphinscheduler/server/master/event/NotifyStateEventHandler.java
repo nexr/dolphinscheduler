@@ -18,7 +18,7 @@ import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Optional;
 
@@ -28,18 +28,39 @@ public class NotifyStateEventHandler implements StateEventHandler {
     private static final String NDAP_WORKFLOW_INSTANCE_ID_PROP = "NDAP_SUB_WORKFLOW_PARENT_INSTANCE_ID";
     private static final String NDAP_WORKFLOW_INSTANCE_STATE_CHANGE_URI_PROP = "NDAP_WORKFLOW_INSTANCE_NOTIFICATION_URI";
     private static final String NDAP_TASK_INSTANCE_STATE_CHANGE_URI_PROP = "NDAP_TASK_INSTANCE_NOTIFICATION_URI";
-    private String makeStateEventMsg(String workflowInstanceId, String dolphinSchedulerProcessInstanceId,
-                                                String dolphinSchedulerTaskCode, String dolphinSchedulerTaskInstanceId, String status) {
+    private String makeStateEventMsg(Long workflowInstanceId, Long dolphinSchedulerProcessInstanceId,
+                                     Long dolphinSchedulerTaskCode, Long dolphinSchedulerTaskInstanceId,
+                                     String status, String taskResult, Date startTime, Date endTime) {
         JsonObject jsonBody = new JsonObject();
         jsonBody.addProperty("workflowInstanceId", workflowInstanceId);
         jsonBody.addProperty("dolphinSchedulerProcessInstanceId", dolphinSchedulerProcessInstanceId);
         jsonBody.addProperty("dolphinSchedulerTaskCode", dolphinSchedulerTaskCode);
         jsonBody.addProperty("dolphinSchedulerTaskInstanceId", dolphinSchedulerTaskInstanceId);
         jsonBody.addProperty("status", status);
+        jsonBody.addProperty("taskResult", (taskResult != null) ? taskResult : null);
+        jsonBody.addProperty("startTime", (startTime != null) ? startTime.getTime() : null);
+        jsonBody.addProperty("endTime", (endTime != null) ? endTime.getTime() : null);
         return jsonBody.toString();
     }
 
-    private String findValueFromDolphinParams(JsonArray params, String propValue) {
+    private String findOutValueFromVarPool(JsonArray pool) {
+        if (pool == null || pool.isEmpty()) {
+            return null;
+        }
+
+        Iterator<JsonElement> iter = pool.iterator();
+
+        while (iter.hasNext()) {
+            JsonObject prop = iter.next().getAsJsonObject();
+            if (prop.get("direct").getAsString().equals("OUT")) {
+                return String.format("%s=%s", prop.get("prop").getAsString(), prop.get("value").getAsString());
+            }
+        }
+
+        return null;
+    }
+
+    private String findValueFromGlobalParams(JsonArray params, String propValue) {
         if (params == null ||  params.isEmpty()) {
             return null;
         }
@@ -74,22 +95,23 @@ public class NotifyStateEventHandler implements StateEventHandler {
             }
 
             final JsonArray globalParams = new Gson().fromJson(processGlobalParams, JsonArray.class);
-            final String workflowInstanceId = findValueFromDolphinParams(globalParams, NDAP_WORKFLOW_INSTANCE_ID_PROP);
+            final String workflowInstanceId = findValueFromGlobalParams(globalParams, NDAP_WORKFLOW_INSTANCE_ID_PROP);
 
             if (workflowInstanceId == null) {
                 logger.warn("No NDAP_SUB_WORKFLOW_PARENT_INSTANCE_ID in process instance id[{}]", processInstance.getId());
                 return false;
             }
 
-            final String uri = findValueFromDolphinParams(globalParams, NDAP_WORKFLOW_INSTANCE_STATE_CHANGE_URI_PROP);
+            final String uri = findValueFromGlobalParams(globalParams, NDAP_WORKFLOW_INSTANCE_STATE_CHANGE_URI_PROP);
 
             if (uri == null) {
                 logger.warn("No notification url for state event type[{}]", stateEvent.getType().name());
                 return false;
             }
 
-            final String reqBody = makeStateEventMsg(workflowInstanceId, String.valueOf(stateEvent.getProcessInstanceId()),
-                    null, null, stateEvent.getExecutionStatus().name());
+            final String reqBody = makeStateEventMsg(Long.valueOf(workflowInstanceId), (long)stateEvent.getProcessInstanceId(),
+                    null, null, stateEvent.getExecutionStatus().name(),
+                    null, processInstance.getStartTime(), processInstance.getEndTime());
 
             logger.info("notifying state change event to NDAP. url[{}], msg[{}]", uri, reqBody);
 
@@ -119,7 +141,7 @@ public class NotifyStateEventHandler implements StateEventHandler {
             }
 
             final JsonArray globalParams = new Gson().fromJson(processGlobalParams, JsonArray.class);
-            final String workflowInstanceId = findValueFromDolphinParams(globalParams, NDAP_WORKFLOW_INSTANCE_ID_PROP);
+            final String workflowInstanceId = findValueFromGlobalParams(globalParams, NDAP_WORKFLOW_INSTANCE_ID_PROP);
 
             if (workflowInstanceId == null) {
                 logger.warn("No NDAP_SUB_WORKFLOW_PARENT_INSTANCE_ID in process instance id[{}]", processInstance.getId());
@@ -141,15 +163,23 @@ public class NotifyStateEventHandler implements StateEventHandler {
                 return false;
             }
 
-            String uri = findValueFromDolphinParams(globalParams, NDAP_TASK_INSTANCE_STATE_CHANGE_URI_PROP);
+            String uri = findValueFromGlobalParams(globalParams, NDAP_TASK_INSTANCE_STATE_CHANGE_URI_PROP);
 
             if (uri == null) {
                 logger.warn("No notification url for state event type[{}]", stateEvent.getType().name());
                 return false;
             }
 
-            final String reqBody = makeStateEventMsg(workflowInstanceId, String.valueOf(stateEvent.getProcessInstanceId()),
-                    String.valueOf(taskInstance.getTaskCode()), String.valueOf(taskInstance.getId()), taskInstance.getState().name());
+            String taskResult = null;
+
+            if (taskInstance.getState().typeIsSuccess() && taskInstance.getVarPool() != null) {
+                final JsonArray taskVarPool = new Gson().fromJson(taskInstance.getVarPool(), JsonArray.class);
+                taskResult = findOutValueFromVarPool(taskVarPool);
+            }
+
+            final String reqBody = makeStateEventMsg(Long.valueOf(workflowInstanceId), (long)stateEvent.getProcessInstanceId(),
+                    taskInstance.getTaskCode(), (long)taskInstance.getId(), taskInstance.getState().name(),
+                    taskResult, taskInstance.getStartTime(), taskInstance.getEndTime());
 
             logger.info("notifying state change event to NDAP. url[{}], msg[{}]", uri, reqBody);
             sendEventMsg(uri, reqBody);
