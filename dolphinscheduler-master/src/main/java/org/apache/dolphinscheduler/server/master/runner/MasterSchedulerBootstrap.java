@@ -86,6 +86,9 @@ public class MasterSchedulerBootstrap extends BaseDaemonThread implements AutoCl
     private RegistryClient registryClient;
 
     @Autowired
+    private ServerNodeManager serverNodeManager;
+
+    @Autowired
     private StateWheelExecuteThread stateWheelExecuteThread;
 
     @Autowired
@@ -144,7 +147,7 @@ public class MasterSchedulerBootstrap extends BaseDaemonThread implements AutoCl
                     if (ServerNodeManager.getMasterSize() <= 0) {
                         consecutiveFailureCounts++;
                         logger.warn("Could not get masters in a row: " + consecutiveFailureCounts);
-                        if (consecutiveFailureCounts == 5) {
+                        if (consecutiveFailureCounts == 3) {
                             registryClient.getStoppable().stop(
                                     "Something wrong: master counts is zero 5 times in a row. stop this master application.");
                         }
@@ -240,6 +243,8 @@ public class MasterSchedulerBootstrap extends BaseDaemonThread implements AutoCl
             int masterCount = ServerNodeManager.getMasterSize();
             if (masterCount <= 0) {
                 logger.warn("Master count: {} is invalid, the current slot: {}", masterCount, thisMasterSlot);
+                //try to update master nodes under the invalid status
+                serverNodeManager.updateMasterNodes();
                 return Collections.emptyList();
             }
             int pageNumber = 0;
