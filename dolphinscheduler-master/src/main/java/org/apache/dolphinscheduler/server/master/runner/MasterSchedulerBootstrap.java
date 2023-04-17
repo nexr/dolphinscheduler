@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import org.apache.dolphinscheduler.service.registry.RegistryClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +81,9 @@ public class MasterSchedulerBootstrap extends BaseDaemonThread implements AutoCl
 
     @Autowired
     private ProcessInstanceExecCacheManager processInstanceExecCacheManager;
+
+    @Autowired
+    private RegistryClient registryClient;
 
     @Autowired
     private StateWheelExecuteThread stateWheelExecuteThread;
@@ -123,6 +127,7 @@ public class MasterSchedulerBootstrap extends BaseDaemonThread implements AutoCl
      */
     @Override
     public void run() {
+        int consecutiveFailureCounts = 0;
         while (Stopper.isRunning()) {
             try {
                 // todo: if the workflow event queue is much, we need to handle the back pressure
@@ -135,6 +140,17 @@ public class MasterSchedulerBootstrap extends BaseDaemonThread implements AutoCl
                 }
                 List<Command> commands = findCommands();
                 if (CollectionUtils.isEmpty(commands)) {
+                    // check master counts, can be failed 5 times in a row
+                    if (ServerNodeManager.getMasterSize() >= 0) {
+                        consecutiveFailureCounts++;
+                        logger.warn("Could not get masters in a row: " + consecutiveFailureCounts);
+                        if (consecutiveFailureCounts == 5) {
+                            registryClient.getStoppable().stop(
+                                    "Something wrong: master counts is zero 5 times in a row. stop this master application.");
+                        }
+                    } else {
+                        consecutiveFailureCounts = 0;
+                    }
                     // indicate that no command ,sleep for 1s
                     Thread.sleep(Constants.SLEEP_TIME_MILLIS);
                     continue;
