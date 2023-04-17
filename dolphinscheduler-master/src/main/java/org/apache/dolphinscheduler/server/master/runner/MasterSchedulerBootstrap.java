@@ -141,7 +141,7 @@ public class MasterSchedulerBootstrap extends BaseDaemonThread implements AutoCl
                 List<Command> commands = findCommands();
                 if (CollectionUtils.isEmpty(commands)) {
                     // check master counts, can be failed 5 times in a row
-                    if (ServerNodeManager.getMasterSize() >= 0) {
+                    if (ServerNodeManager.getMasterSize() <= 0) {
                         consecutiveFailureCounts++;
                         logger.warn("Could not get masters in a row: " + consecutiveFailureCounts);
                         if (consecutiveFailureCounts == 5) {
