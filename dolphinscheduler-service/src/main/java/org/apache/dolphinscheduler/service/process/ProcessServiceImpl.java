@@ -929,6 +929,10 @@ public class ProcessServiceImpl implements ProcessService {
         if (commandTypeIfComplement == CommandType.REPEAT_RUNNING) {
             setGlobalParamIfCommanded(processDefinition, cmdParam);
         }
+        // reset global params while failover is needed by cmdParam
+        if (commandTypeIfComplement == CommandType.RECOVER_TOLERANCE_FAULT_PROCESS) {
+            setGlobalParamIfCommanded(processDefinition, cmdParam);
+        }
 
         // time zone
         String timezoneId = cmdParam.get(Constants.SCHEDULE_TIMEZONE);
