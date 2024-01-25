@@ -30,7 +30,7 @@ public enum StateEventType {
     PROCESS_BLOCKED(6, "process blocked"),
     PROCESS_SUBMIT_FAILED(7, "process submit failed"),
     //For NDAP
-    NOTIFY_STATE_CHANGE(7, "notify state change");
+    NOTIFY_STATE_CHANGE(8, "notify state change");
     StateEventType(int code, String descp) {
         this.code = code;
         this.descp = descp;
