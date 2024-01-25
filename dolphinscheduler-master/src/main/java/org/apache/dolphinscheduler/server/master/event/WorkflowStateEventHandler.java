@@ -31,6 +31,63 @@ import com.google.auto.service.AutoService;
 @Slf4j
 public class WorkflowStateEventHandler implements StateEventHandler {
 
+    private String makeWorkflowInstanceStateMsg(String workflowInstanceId, String dolphinSchedulerProcessInstanceId,
+                                                String dolphinSchedulerTaskCode, String dolphinSchedulerTaskInstanceId, String status) {
+        JsonObject jsonBody = new JsonObject();
+        jsonBody.addProperty("workflowInstanceId", workflowInstanceId);
+        jsonBody.addProperty("dolphinSchedulerProcessInstanceId", dolphinSchedulerProcessInstanceId);
+        jsonBody.addProperty("dolphinSchedulerTaskCode", dolphinSchedulerTaskCode);
+        jsonBody.addProperty("dolphinSchedulerTaskInstanceId", dolphinSchedulerTaskInstanceId);
+        jsonBody.addProperty("status", status);
+        return jsonBody.toString();
+    }
+
+    private void notifyWorkflowInstanceStateEvent(ProcessInstance processInstance, StateEvent event) {
+        try {
+            final String processGlobalParams = processInstance.getGlobalParams();
+
+            if (processGlobalParams == null) {
+                throw new RuntimeException("No global params for process instance id[" + processInstance.getId() + "]");
+            }
+
+            final JsonObject globalParams = new Gson().fromJson(processGlobalParams, JsonObject.class);
+
+            log.info("process instance id[{}], task code[{}], task instance id[{}], process global params[{}]",
+                    event.getProcessInstanceId(), event.getTaskCode(), event.getTaskInstanceId(), processGlobalParams);
+
+            log.info("process instance id[{}], task code[{}], task instance id[{}], process var pool[{}]",
+                    event.getProcessInstanceId(), event.getTaskCode(), event.getTaskInstanceId(), processInstance.getVarPool());
+
+            String uri;
+            if (globalParams.has("NDAP_WORKFLOW_INSTANCE_NOTIFICATION_URI")) {
+                uri = globalParams.get("NDAP_WORKFLOW_INSTANCE_NOTIFICATION_URI").getAsString();
+            } else {
+                throw new RuntimeException("No NDAP_WORKFLOW_INSTANCE_NOTIFICATION_URI in process instance id[" + processInstance.getId() + "]");
+            }
+
+            String workflowInstanceId;
+            if (globalParams.has("NDAP_SUB_WORKFLOW_PARENT_INSTANCE_ID")) {
+                workflowInstanceId = globalParams.get("NDAP_SUB_WORKFLOW_PARENT_INSTANCE_ID").getAsString();
+            } else {
+                throw new RuntimeException("No NDAP_SUB_WORKFLOW_PARENT_INSTANCE_ID in process instance id[" + processInstance.getId() + "]");
+            }
+
+            log.info("ndap workflow instance id[{}], process instance id[{}], task code[{}], task instance id[{}], notification uri[{}]",
+                    workflowInstanceId, event.getProcessInstanceId(), event.getTaskCode(), event.getTaskInstanceId(), uri);
+
+            String reqBody = makeWorkflowInstanceStateMsg(workflowInstanceId, String.valueOf(event.getProcessInstanceId()),
+                    String.valueOf(event.getTaskCode()), String.valueOf(event.getTaskInstanceId()), event.getExecutionStatus().name());
+            ByteArrayEntity entity = new ByteArrayEntity(reqBody.getBytes(StandardCharsets.UTF_8));
+
+            HttpPost request = new HttpPost(uri);
+            request.setHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.toString());
+            request.setEntity(entity);
+            HttpUtils.getInstance().execute(request);
+        } catch (Exception e) {
+            log.warn("----notifying workflow instance status failed : {}", e.getMessage());
+        }
+    }
+
     @Override
     public boolean handleStateEvent(WorkflowExecuteRunnable workflowExecuteRunnable,
                                     StateEvent stateEvent) throws StateEventHandleException {
@@ -43,6 +100,9 @@ public class WorkflowStateEventHandler implements StateEventHandler {
         log.info(
                 "Handle workflow instance state event, the current workflow instance state {} will be changed to {}",
                 processInstance.getState(), workflowStateEvent.getStatus());
+
+        //To NDAP
+        notifyWorkflowInstanceStateEvent(workflowExecuteRunnable.getProcessInstance(), stateEvent);
 
         if (workflowStateEvent.getStatus().isStop()) {
             // serial wait execution type needs to wake up the waiting process

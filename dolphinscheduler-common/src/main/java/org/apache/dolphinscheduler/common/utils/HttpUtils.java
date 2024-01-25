@@ -120,8 +120,8 @@ public class HttpUtils {
         socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
                 .register("http", PlainConnectionSocketFactory.INSTANCE).register("https", socketFactory).build();
         cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
-        cm.setDefaultMaxPerRoute(60);
-        cm.setMaxTotal(100);
+        cm.setDefaultMaxPerRoute(300);
+        cm.setMaxTotal(600);
 
     }
 

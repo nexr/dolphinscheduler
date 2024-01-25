@@ -28,8 +28,9 @@ public enum StateEventType {
     WAKE_UP_TASK_GROUP(4, "wait task group"),
     TASK_RETRY(5, "task retry"),
     PROCESS_BLOCKED(6, "process blocked"),
-    PROCESS_SUBMIT_FAILED(7, "process submit failed");
-
+    PROCESS_SUBMIT_FAILED(7, "process submit failed"),
+    //For NDAP
+    NOTIFY_STATE_CHANGE(7, "notify state change");
     StateEventType(int code, String descp) {
         this.code = code;
         this.descp = descp;

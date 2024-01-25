@@ -263,6 +263,32 @@ public class WorkflowExecuteRunnable implements IWorkflowExecuteRunnable {
     }
 
     /**
+     * Notify Processs_State_Change, Task_State_Change to NDAP
+     * @param stateEvent
+     */
+    private void notifyStateEvent(StateEvent stateEvent) {
+        //By Paul for NDAP
+        if (!stateEvent.getType().equals(StateEventType.PROCESS_STATE_CHANGE)
+                && !stateEvent.getType().equals(StateEventType.TASK_STATE_CHANGE)) {
+            return;
+        }
+
+        try {
+            StateEventHandler stateEventHandler =
+                    StateEventHandlerManager.getStateEventHandler(StateEventType.NOTIFY_STATE_CHANGE).orElse(null);
+
+            if (stateEventHandler != null) {
+                log.info("Notify state event, {}", stateEvent);
+                stateEventHandler.handleStateEvent(this, stateEvent);
+            } else {
+                log.warn("Notify State Event Handler not loaded");
+            }
+        } catch (Exception e) {
+            log.warn("Notify State Event{} error : {}", stateEvent.getType().name(), e.getMessage());
+        }
+    }
+
+    /**
      * handle event
      */
     public void handleEvents() {
@@ -291,6 +317,8 @@ public class WorkflowExecuteRunnable implements IWorkflowExecuteRunnable {
                                         "Cannot find handler for the given state event"));
                 log.info("Begin to handle state event, {}", stateEvent);
                 if (stateEventHandler.handleStateEvent(this, stateEvent)) {
+                    //By paul for NDAP
+                    notifyStateEvent(stateEvent);
                     this.stateEvents.remove(stateEvent);
                 }
             } catch (StateEventHandleError stateEventHandleError) {
@@ -1265,13 +1293,13 @@ public class WorkflowExecuteRunnable implements IWorkflowExecuteRunnable {
                 TaskInstance otherTask = allTaskInstance.get(proName);
 
                 if (otherTask == null) {
-                    logger.warn("[WorkflowInstance-{}][TaskInstance-{}] otherTask for [PropertyName-{}] is null.",
+                    log.warn("[WorkflowInstance-{}][TaskInstance-{}] otherTask for [PropertyName-{}] is null.",
                             preTaskInstance.getProcessInstanceId(), preTaskInstance.getId(), proName);
                     return;
                 }
 
                 if (otherTask.getEndTime() == null || preTaskInstance.getEndTime() == null) {
-                    logger.warn("[WorkflowInstance-{}][OtherTaskInstance-{}][PreTaskInstance-{}] have null endTime. [otherTask-endTime-{}, preTaskInstance-endTime-{}].",
+                    log.warn("[WorkflowInstance-{}][OtherTaskInstance-{}][PreTaskInstance-{}] have null endTime. [otherTask-endTime-{}, preTaskInstance-endTime-{}].",
                             preTaskInstance.getProcessInstanceId(), otherTask.getId(), preTaskInstance.getId(),
                             otherTask.getEndTime(), preTaskInstance.getEndTime());
                     return;
