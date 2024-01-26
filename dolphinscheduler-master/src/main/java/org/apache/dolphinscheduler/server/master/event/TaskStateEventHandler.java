@@ -17,18 +17,27 @@
 
 package org.apache.dolphinscheduler.server.master.event;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import org.apache.dolphinscheduler.common.enums.StateEventType;
+import org.apache.dolphinscheduler.common.utils.HttpUtils;
+import org.apache.dolphinscheduler.dao.entity.ProcessInstance;
 import org.apache.dolphinscheduler.dao.entity.TaskInstance;
 import org.apache.dolphinscheduler.remote.exceptions.RemotingException;
 import org.apache.dolphinscheduler.server.master.metrics.TaskMetrics;
 import org.apache.dolphinscheduler.server.master.runner.WorkflowExecuteRunnable;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
 
 import com.google.auto.service.AutoService;
+import org.apache.http.HttpHeaders;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.ContentType;
 
 @AutoService(StateEventHandler.class)
 @Slf4j
@@ -45,7 +54,7 @@ public class TaskStateEventHandler implements StateEventHandler {
         return jsonBody.toString();
     }
 
-    private void notifyTaskInstanceStateEvent(ProcessInstance processInstance, StateEvent event) {
+    private void notifyTaskInstanceStateEvent(ProcessInstance processInstance, TaskStateEvent event) {
         try {
             final String processGlobalParams = processInstance.getGlobalParams();
 
@@ -79,7 +88,7 @@ public class TaskStateEventHandler implements StateEventHandler {
                     workflowInstanceId, event.getProcessInstanceId(), event.getTaskCode(), event.getTaskInstanceId(), uri);
 
             String reqBody = makeTaskInstanceStateMsg(workflowInstanceId, String.valueOf(event.getProcessInstanceId()),
-                    String.valueOf(event.getTaskCode()), String.valueOf(event.getTaskInstanceId()), event.getExecutionStatus().name());
+                    String.valueOf(event.getTaskCode()), String.valueOf(event.getTaskInstanceId()), event.getStatus().name());
             ByteArrayEntity entity = new ByteArrayEntity(reqBody.getBytes(StandardCharsets.UTF_8));
 
             HttpPost request = new HttpPost(uri);
@@ -108,9 +117,9 @@ public class TaskStateEventHandler implements StateEventHandler {
             throw new StateEventHandleError("Task state event handle error due to task state is null");
         }
 
-        ProcessInstance processInstance = workflowExecuteRunnable.getProcessInstance();
+        ProcessInstance processInstance = workflowExecuteRunnable.getWorkflowExecuteContext().getWorkflowInstance();
         if (processInstance!=null) {
-            notifyTaskInstanceStateEvent(processInstance, stateEvent);
+            notifyTaskInstanceStateEvent(processInstance, taskStateEvent);
         } else {
             log.warn("---- process instance is null. process instance id[{}], task instance id[{}], task state[{}]",
                     stateEvent.getProcessInstanceId(), stateEvent.getTaskInstanceId(), task.getState().name());
