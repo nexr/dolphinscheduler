@@ -63,13 +63,13 @@ public class NotifyStateEventHandler implements StateEventHandler {
        return null;
     }
 
-    private boolean notifyWorkflowStateEvent(WorkflowExecuteRunnable workflowExecuteRunnable, StateEvent stateEvent) {
+    private boolean notifyWorkflowStateEvent(WorkflowExecuteRunnable workflowExecuteRunnable, WorkflowStateEvent stateEvent) {
         try {
-            final ProcessInstance processInstance = workflowExecuteRunnable.getProcessInstance();
+            final ProcessInstance processInstance = workflowExecuteRunnable.getWorkflowExecuteContext().getWorkflowInstance();
 
             if (processInstance == null) {
                 log.warn("process instance is null. event type[{}], process instance id[{}], task instance id[{}], state[{}]",
-                        stateEvent.getType().name(), stateEvent.getProcessInstanceId(), stateEvent.getTaskInstanceId(), stateEvent.getExecutionStatus().name());
+                        stateEvent.getType().name(), stateEvent.getProcessInstanceId(), stateEvent.getTaskInstanceId(), stateEvent.getStatus().name());
                 return false;
             }
 
@@ -96,7 +96,7 @@ public class NotifyStateEventHandler implements StateEventHandler {
             }
 
             final String reqBody = makeStateEventMsg(Long.valueOf(workflowInstanceId), (long)stateEvent.getProcessInstanceId(),
-                    null, null, stateEvent.getExecutionStatus().name(),
+                    null, null, stateEvent.getStatus().name(),
                     processInstance.getStartTime(), processInstance.getEndTime());
 
             sendEventMsg(uri, reqBody);
@@ -126,7 +126,7 @@ public class NotifyStateEventHandler implements StateEventHandler {
         return false;
     }
 
-    private boolean notifyTaskStateEvent(WorkflowExecuteRunnable workflowExecuteRunnable, StateEvent stateEvent) {
+    private boolean notifyTaskStateEvent(WorkflowExecuteRunnable workflowExecuteRunnable, TaskStateEvent stateEvent) {
         try {
 
             Optional<TaskInstance> taskInstanceOptional =
@@ -148,11 +148,11 @@ public class NotifyStateEventHandler implements StateEventHandler {
                 return false;
             }
 
-            final ProcessInstance processInstance = workflowExecuteRunnable.getProcessInstance();
+            final ProcessInstance processInstance = workflowExecuteRunnable.getWorkflowExecuteContext().getWorkflowInstance();
 
             if (processInstance == null) {
                 log.warn("process instance is null. event type[{}], process instance id[{}], task instance id[{}], state[{}]",
-                        stateEvent.getType().name(), stateEvent.getProcessInstanceId(), stateEvent.getTaskInstanceId(), stateEvent.getExecutionStatus().name());
+                        stateEvent.getType().name(), stateEvent.getProcessInstanceId(), stateEvent.getTaskInstanceId(), stateEvent.getStatus().name());
                 return false;
             }
 
@@ -210,9 +210,9 @@ public class NotifyStateEventHandler implements StateEventHandler {
     public boolean handleStateEvent(WorkflowExecuteRunnable workflowExecuteRunnable, StateEvent stateEvent) throws StateEventHandleException, StateEventHandleError {
         switch (stateEvent.getType()) {
             case PROCESS_STATE_CHANGE:
-                return notifyWorkflowStateEvent(workflowExecuteRunnable, stateEvent);
+                return notifyWorkflowStateEvent(workflowExecuteRunnable, (WorkflowStateEvent)stateEvent);
             case TASK_STATE_CHANGE:
-                return notifyTaskStateEvent(workflowExecuteRunnable, stateEvent);
+                return notifyTaskStateEvent(workflowExecuteRunnable, (TaskStateEvent)stateEvent);
             default:
                 return false;
         }
